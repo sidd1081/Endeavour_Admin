@@ -212,7 +212,7 @@ export default function UsersTable() {
           id="limit"
           value={limit}
           onChange={handleLimitChange}
-          className="border p-1 rounded-md"
+          className="border p-1 rounded-md bg-white text-black"
         >
           <option value={5}>5</option>
           <option value={10}>10</option>
