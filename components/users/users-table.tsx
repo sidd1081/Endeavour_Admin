@@ -68,13 +68,11 @@ export default function UsersTable() {
       setTotalPages(Math.ceil(total / limit));
       
 
-      // Fallback: fetch all users (if the backend doesn't support search/pagination)
-      // const response = await api.get("/users", {
-      //   headers: { Authorization: `Bearer ${token}` },
-      // });
+    
+     
       
       console.log("Fetched Users:", response.data);
-      // Assuming the API returns all users as an array
+      
       const fetchedUsers = response.data?.data?.users || response.data.users || [];
       setAllUsers(fetchedUsers);
 

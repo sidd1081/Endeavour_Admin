@@ -31,7 +31,7 @@ export default function DashboardView() {
 
         for (const event of events) {
           const teamsResponse = await api.post("/event/teams", { eventId: event._id });
-          const teams = teamsResponse.data.data.teams || [];
+          const teams = teamsResponse.data.data.teams.filter(team => team.isVerified) || [];
           const teamsCount = teams.length;
 
           totalTeamsCount += teamsCount;
@@ -121,7 +121,7 @@ export default function DashboardView() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Teams</CardTitle>
+                <CardTitle className="text-sm font-medium">Verified Teams</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
