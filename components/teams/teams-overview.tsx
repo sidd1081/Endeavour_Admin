@@ -10,7 +10,7 @@ import { Search } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { toast } from "react-toastify"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface Team {
   _id: string
@@ -76,6 +76,9 @@ export default function TeamsOverview() {
   const [currentScreenshot, setCurrentScreenshot] = useState<string | null>(null)
   const [currentTransactionId, setCurrentTransactionId] = useState<string | null>(null)
 
+  // State for verification confirmation dialog
+  const [verificationDialogOpen, setVerificationDialogOpen] = useState(false)
+
   // Fetch events and teams for overview
   useEffect(() => {
     const fetchAllTeams = async () => {
@@ -123,8 +126,12 @@ export default function TeamsOverview() {
         const usersList = res.data?.data?.users || []
         setUsers(usersList)
         setAllUsers(usersList)
+
+        // Log to verify we have user data
+        console.log("User data loaded:", usersList.length, "users")
       } catch (error) {
         console.error("Error fetching users:", error)
+        toast.error("Failed to load user data")
       }
     }
     fetchUsers()
@@ -132,13 +139,23 @@ export default function TeamsOverview() {
 
   // Filter teams based on selected event and search query
   useEffect(() => {
-    let filtered = teams
+    let filtered = [...teams] // Create a new array to avoid mutation issues
+
     if (selectedEventId) {
       filtered = filtered.filter((team) => team.eventId === selectedEventId)
     }
+
     if (searchQuery) {
       filtered = filtered.filter((team) => team.teamName.toLowerCase().includes(searchQuery.toLowerCase()))
     }
+
+    console.log("Filtering teams:", {
+      total: teams.length,
+      filtered: filtered.length,
+      eventId: selectedEventId,
+      query: searchQuery,
+    })
+
     setFilteredTeams(filtered)
   }, [selectedEventId, searchQuery, teams])
 
@@ -402,6 +419,50 @@ export default function TeamsOverview() {
         </DialogContent>
       </Dialog>
 
+      {/* Verification Confirmation Dialog */}
+      <Dialog open={verificationDialogOpen} onOpenChange={setVerificationDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Verification</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>You are changing the status of team "{selectedTeam?.teamName}" to TRUE</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVerificationDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                if (selectedTeam) {
+                  try {
+                    const response = await api.patch(`/teams/verify/${selectedTeam.teamCode}`)
+                    if (response.data.success) {
+                      // Update local state
+                      setTeams((prevTeams) =>
+                        prevTeams.map((team) => (team._id === selectedTeam._id ? { ...team, isVerified: true } : team)),
+                      )
+                      setFilteredTeams((prevTeams) =>
+                        prevTeams.map((team) => (team._id === selectedTeam._id ? { ...team, isVerified: true } : team)),
+                      )
+                      toast.success("Team verified successfully")
+                    } else {
+                      toast.error("Failed to verify team")
+                    }
+                  } catch (error) {
+                    console.error("Error verifying team:", error)
+                    toast.error("Error verifying team")
+                  }
+                  setVerificationDialogOpen(false)
+                }
+              }}
+            >
+              Change
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Filtering options for teams overview */}
       <div className="mt-4 flex flex-col md:flex-row gap-4 w-full">
         <div className="flex-1">
@@ -472,24 +533,17 @@ export default function TeamsOverview() {
                     </TableCell>
                     <TableCell>{team.isRegistered ? "Yes" : "No"}</TableCell>
                     <TableCell>
-                      <Select
-                        defaultValue={team.isVerified ? "true" : "false"}
-                        onValueChange={(value) => {
-                          const newStatus = value === "true"
-                          // Only make API call if status actually changed
-                          if (newStatus !== team.isVerified) {
-                            updateVerificationStatus(team._id, newStatus)
-                          }
-                        }}
-                      >
-                        <SelectTrigger className="w-[100px]">
-                          <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="true">True</SelectItem>
-                          <SelectItem value="false">False</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      {team.isVerified ? (
+                        <span className="text-green-600 font-medium">Verified</span>
+                      ) : (
+                        <Checkbox
+                          checked={false}
+                          onCheckedChange={() => {
+                            setSelectedTeam(team)
+                            setVerificationDialogOpen(true)
+                          }}
+                        />
+                      )}
                     </TableCell>
                     <TableCell>
                       <Button variant="outline" size="sm" onClick={() => openScreenshotDialog(team)}>
