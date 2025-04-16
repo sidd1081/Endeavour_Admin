@@ -93,15 +93,36 @@ export default function DashboardView() {
               <div className="bg-green-100 p-4 rounded-lg">
                 <h3 className="text-lg font-bold mb-2">📌 Other Events Revenue</h3>
                 <div className="space-y-2">
-                  {otherEvents.length > 0 ? (
-                    otherEvents.map(({ name, teams, price, total }, index) => (
-                      <div key={index} className="text-sm text-gray-700">
-                        <strong>{name}:</strong> {teams} teams × ₹{price} = <span className="font-bold">₹{total}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-gray-500">No revenue data available.</p>
-                  )}
+                {otherEvents.length > 0 ? (
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {otherEvents.map(({ name, teams, price, total }, index) => (
+      <div
+        key={index}
+        className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4 shadow-md"
+      >
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-lg font-bold text-blue-900">{name}</h4>
+          <span className="text-sm font-medium text-blue-700 bg-blue-200 px-2 py-0.5 rounded">
+            ₹{price} / team
+          </span>
+        </div>
+        <div className="text-gray-800 text-sm">
+          <p>
+            Teams Participated:{" "}
+            <span className="font-semibold text-blue-700">{teams}</span>
+          </p>
+          <p>
+            Total Revenue:{" "}
+            <span className="font-bold text-green-700 text-base">₹{total}</span>
+          </p>
+        </div>
+      </div>
+    ))}
+  </div>
+) : (
+  <p className="text-sm text-gray-500">No revenue data available.</p>
+)}
+
                 </div>
               </div>
             </div>
