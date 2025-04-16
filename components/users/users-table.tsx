@@ -29,17 +29,12 @@ interface User {
 
 export default function UsersTable() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [users, setUsers] = useState<User[]>([]); // final list to display
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loggedInUser, setLoggedInUser] = useState<User | null>(null);
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(5);
-  const [totalPages, setTotalPages] = useState(1);
   const router = useRouter();
 
-  // Fetch users from the backend.
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -56,63 +51,23 @@ export default function UsersTable() {
       const parsedUser = JSON.parse(storedUser);
       setLoggedInUser(parsedUser);
 
-      // If your backend supports search and pagination, uncomment the following:
-      
       const response = await api.get("/users", {
         headers: { Authorization: `Bearer ${token}` },
-        params: { search: searchTerm, page, limit },
       });
-      console.log("Fetched Users:", response.data);
-      setAllUsers(response.data?.users || []);
-      const total = response.data?.total || 0;
-      setTotalPages(Math.ceil(total / limit));
-      
 
-    
-     
-      
-      console.log("Fetched Users:", response.data);
-      
       const fetchedUsers = response.data?.data?.users || response.data.users || [];
       setAllUsers(fetchedUsers);
-
-      // Update total pages based on filtered data (will recalc below)
-      setTotalPages(Math.ceil(fetchedUsers.length / limit));
     } catch (error) {
       console.error("Error fetching users:", error);
       setError("Failed to fetch users. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, [router, searchTerm, page, limit]);
+  }, [router]);
 
-  // Apply client-side filtering and pagination if backend does not support it.
-  const applyFiltersAndPagination = useCallback(() => {
-    // Filter users based on search term.
-    const filtered = allUsers.filter(
-      (user) =>
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.phone.includes(searchTerm)
-    );
-    // Update total pages based on filtered results.
-    setTotalPages(Math.ceil(filtered.length / limit) || 1);
-
-    // Get only the users for the current page.
-    const startIndex = (page - 1) * limit;
-    const paginated = filtered.slice(startIndex, startIndex + limit);
-    setUsers(paginated);
-  }, [allUsers, searchTerm, page, limit]);
-
-  // Re-fetch users on mount.
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
-
-  // Reapply filtering and pagination whenever dependencies change.
-  useEffect(() => {
-    applyFiltersAndPagination();
-  }, [allUsers, searchTerm, page, limit, applyFiltersAndPagination]);
 
   const updateRole = async (
     userId: string,
@@ -133,7 +88,6 @@ export default function UsersTable() {
       await api.put(`/users/${userId}`, updatedUser, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      // Refresh users after update.
       fetchUsers();
       alert("User role updated successfully!");
     } catch (error) {
@@ -142,16 +96,14 @@ export default function UsersTable() {
     }
   };
 
-  // Helper to get user role as string.
   const getUserRole = (user: User) => {
     if (user.isSuperAdmin) return "Super Admin";
     if (user.isAdmin) return "Admin";
     return "User";
   };
 
-  // Export displayed users to Excel (.xlsx).
   const exportToExcel = () => {
-    const data = users.map((user) => ({
+    const data = allUsers.map((user) => ({
       Name: user.name,
       Email: user.email,
       Phone: user.phone,
@@ -164,19 +116,12 @@ export default function UsersTable() {
     XLSX.writeFile(workbook, "users_export.xlsx");
   };
 
-  // Pagination controls.
-  const handlePrevPage = () => {
-    if (page > 1) setPage(page - 1);
-  };
-
-  const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1);
-  };
-
-  const handleLimitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setLimit(parseInt(e.target.value));
-    setPage(1); // Reset to first page when limit changes.
-  };
+  const filteredUsers = allUsers.filter(
+    (user) =>
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.phone.includes(searchTerm)
+  );
 
   return (
     <div className="p-6">
@@ -190,10 +135,7 @@ export default function UsersTable() {
             type="search"
             placeholder="Search users by name, email, or phone..."
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setPage(1); // Reset page when search term changes.
-            }}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full p-2 pl-8 border rounded-md"
           />
         </div>
@@ -202,74 +144,55 @@ export default function UsersTable() {
         </div>
       </div>
 
-      <div className="mt-4 flex items-center gap-4">
-        <label htmlFor="limit" className="mr-2">
-          Show
-        </label>
-        <select
-          id="limit"
-          value={limit}
-          onChange={handleLimitChange}
-          className="border p-1 rounded-md bg-white text-black"
-        >
-          <option value={5}>5</option>
-          <option value={10}>10</option>
-          <option value={20}>20</option>
-        </select>
-        <span>users per page</span>
-      </div>
-
       {error && <p className="mt-4 text-red-500">{error}</p>}
 
       <div className="mt-6 overflow-x-auto">
         {loading ? (
           <p>Loading users...</p>
-        ) : users.length === 0 ? (
+        ) : filteredUsers.length === 0 ? (
           <p>No users found.</p>
         ) : (
-          <Table className="min-w-full">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Profile</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Role</TableHead>
-                {loggedInUser?.isSuperAdmin && <TableHead>Change Role</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map(
-                ({
-                  _id,
-                  name,
-                  email,
-                  phone,
-                  profilePicture,
-                  isAdmin,
-                  isSuperAdmin,
-                }) => (
-                  <TableRow key={_id}>
+          <>
+            {/* Display the total user count */}
+            <p className="mt-4 text-sm">
+              {filteredUsers.length} {filteredUsers.length === 1 ? "user" : "users"} found
+            </p>
+
+            {/* Table for displaying users */}
+            <Table className="min-w-full">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>#</TableHead>
+                  <TableHead>Profile</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Role</TableHead>
+                  {loggedInUser?.isSuperAdmin && <TableHead>Change Role</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.map((user, index) => (
+                  <TableRow key={user._id}>
+                    <TableCell>{index + 1}</TableCell>
                     <TableCell>
                       <Avatar>
                         <AvatarImage
-                          src={profilePicture || "/placeholder.svg"}
-                          alt={name}
+                          src={user.profilePicture || "/placeholder.svg"}
+                          alt={user.name}
                         />
                         <AvatarFallback>
-                          {name.substring(0, 2).toUpperCase()}
+                          {user.name.substring(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                     </TableCell>
-                    <TableCell>{name}</TableCell>
-                    <TableCell>{email}</TableCell>
-                    <TableCell>{phone}</TableCell>
+                    <TableCell>{user.name}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>{user.phone}</TableCell>
                     <TableCell>
-                      {isSuperAdmin ? (
-                        <span className="text-green-500 font-bold">
-                          Super Admin
-                        </span>
-                      ) : isAdmin ? (
+                      {user.isSuperAdmin ? (
+                        <span className="text-green-500 font-bold">Super Admin</span>
+                      ) : user.isAdmin ? (
                         <span className="text-blue-500 font-bold">Admin</span>
                       ) : (
                         <span className="text-gray-500">User</span>
@@ -279,15 +202,15 @@ export default function UsersTable() {
                       <TableCell>
                         <select
                           value={
-                            isSuperAdmin
+                            user.isSuperAdmin
                               ? "superadmin"
-                              : isAdmin
+                              : user.isAdmin
                               ? "admin"
                               : "user"
                           }
                           onChange={(e) =>
                             updateRole(
-                              _id,
+                              user._id,
                               e.target.value as "user" | "admin" | "superadmin"
                             )
                           }
@@ -300,23 +223,11 @@ export default function UsersTable() {
                       </TableCell>
                     )}
                   </TableRow>
-                )
-              )}
-            </TableBody>
-          </Table>
+                ))}
+              </TableBody>
+            </Table>
+          </>
         )}
-      </div>
-
-      <div className="mt-4 flex items-center justify-between">
-        <Button onClick={handlePrevPage} disabled={page === 1}>
-          Previous
-        </Button>
-        <span>
-          Page {page} of {totalPages}
-        </span>
-        <Button onClick={handleNextPage} disabled={page === totalPages}>
-          Next
-        </Button>
       </div>
     </div>
   );
