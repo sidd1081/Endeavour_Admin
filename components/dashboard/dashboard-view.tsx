@@ -20,7 +20,11 @@ export default function DashboardView() {
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {
-        const eventsResponse = await api.get("/events");
+        const [eventsResponse, usersResponse] = await Promise.all([
+          api.get("/events"),
+          api.get("/users"),
+        ]);
+
         const events = eventsResponse.data.data.events.filter(event => !event.isDeleted) || [];
         setTotalEvents(events.length);
 
@@ -29,7 +33,7 @@ export default function DashboardView() {
         let entertainmentTotal = 0;
         let otherEventsList = [];
 
-        for (const event of events) {
+        const teamsPromises = events.map(async (event) => {
           const teamsResponse = await api.post("/event/teams", { eventId: event._id });
           const teams = teamsResponse.data.data.teams.filter(team => team.isVerified) || [];
           const teamsCount = teams.length;
@@ -48,14 +52,16 @@ export default function DashboardView() {
               total: eventRevenue,
             });
           }
-        }
+        });
+
+        // Wait for all team data to be fetched
+        await Promise.all(teamsPromises);
 
         setTotalTeams(totalTeamsCount);
         setTotalMoney(totalRevenue);
         setEntertainmentRevenue(entertainmentTotal);
         setOtherEvents(otherEventsList);
 
-        const usersResponse = await api.get("/users");
         setTotalUsers(usersResponse.data.data?.users?.length || 0);
       } catch (error) {
         console.error("Error fetching dashboard stats:", error);
