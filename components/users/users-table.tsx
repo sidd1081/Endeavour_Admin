@@ -116,12 +116,23 @@ export default function UsersTable() {
     XLSX.writeFile(workbook, "users_export.xlsx");
   };
 
-  const filteredUsers = allUsers.filter(
+  const filteredUsers = allUsers
+  .filter(
     (user) =>
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.phone.includes(searchTerm)
-  );
+  )
+  .sort((a, b) => {
+    const getPriority = (user: User) => {
+      if (user.isSuperAdmin) return 0; // highest priority
+      if (user.isAdmin) return 1;      // second
+      return 2;                        // normal users
+    };
+    return getPriority(a) - getPriority(b);
+  });
+
+
 
   return (
     <div className="p-6">
@@ -160,7 +171,7 @@ export default function UsersTable() {
 
             {/* Table for displaying users */}
             <Table className="min-w-full">
-              <TableHeader>
+              <TableHeader> 
                 <TableRow>
                   <TableHead>#</TableHead>
                   <TableHead>Profile</TableHead>
