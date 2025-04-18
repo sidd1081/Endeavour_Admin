@@ -436,7 +436,10 @@ export default function TeamsOverview() {
               onClick={async () => {
                 if (selectedTeam) {
                   try {
-                    const response = await api.patch(`/teams/verify/${selectedTeam.teamCode}`)
+                    const response = await api.patch(`/teams/verify/${selectedTeam.teamCode}`, {
+                      isVerified: "true"
+                    });
+                    
                     if (response.data.success) {
                       // Update local state
                       setTeams((prevTeams) =>
