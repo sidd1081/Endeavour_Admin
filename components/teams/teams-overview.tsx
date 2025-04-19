@@ -61,6 +61,7 @@ export default function AllTeamsTable() {
   const [memberDialogOpen, setMemberDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEvent, setSelectedEvent] = useState<string>("all");
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
     const fetchTeams = async () => {
@@ -86,6 +87,7 @@ export default function AllTeamsTable() {
 
     fetchTeams();
   }, []);
+
   useEffect(() => {
     const disableShortcuts = (e: KeyboardEvent) => {
       if (
@@ -96,11 +98,11 @@ export default function AllTeamsTable() {
         e.preventDefault();
       }
     };
-  
+
     const disableContextMenu = (e: MouseEvent) => {
       e.preventDefault();
     };
-  
+
     const detectDevTools = () => {
       const threshold = 160;
       const check = () => {
@@ -109,20 +111,28 @@ export default function AllTeamsTable() {
         const end = new Date().getTime();
         if (end - start > threshold) {
           alert("DevTools are not allowed.");
-          window.close(); // or redirect to a safe page
+          window.close();
         }
       };
       setInterval(check, 1000);
     };
-  
+
     document.addEventListener("keydown", disableShortcuts);
     document.addEventListener("contextmenu", disableContextMenu);
     detectDevTools();
-  
+
     return () => {
       document.removeEventListener("keydown", disableShortcuts);
       document.removeEventListener("contextmenu", disableContextMenu);
     };
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      setIsSuperAdmin(payload?.isSuperAdmin === true);
+    }
   }, []);
 
   useEffect(() => {
@@ -144,6 +154,15 @@ export default function AllTeamsTable() {
 
   const handleVerifyPayment = async () => {
     if (!selectedTeam) return;
+
+    if (!isSuperAdmin) {
+      toast({
+        title: "Not Allowed",
+        description: "You are not allowed to verify payments.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const confirmVerify = window.confirm(
       `Are you sure you want to verify the payment for "${selectedTeam.teamName}"?`
@@ -197,7 +216,6 @@ export default function AllTeamsTable() {
     new Map(teams.map((t) => [t.eventId.slug, t.eventId])).values()
   );
 
-  // Export to Excel including leader and member emails
   const exportToExcel = () => {
     const data = filteredTeams.map((team) => {
       const leader = team.members.find(
@@ -233,12 +251,10 @@ export default function AllTeamsTable() {
     <div className="p-4 space-y-6">
       <h2 className="text-2xl font-bold">All Teams</h2>
 
-      {/* Export Button */}
       <Button onClick={exportToExcel} className="mb-4">
         Export to Excel
       </Button>
 
-      {/* Filters */}
       <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
         <Input
           placeholder="Search by team name"
@@ -264,7 +280,6 @@ export default function AllTeamsTable() {
         </Select>
       </div>
 
-      {/* Teams Table */}
       <Table>
         <TableHeader>
           <TableRow>
@@ -313,7 +328,6 @@ export default function AllTeamsTable() {
         </TableBody>
       </Table>
 
-      {/* Dialog for Payment Screenshot */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -343,7 +357,6 @@ export default function AllTeamsTable() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog for Team Members */}
       <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
