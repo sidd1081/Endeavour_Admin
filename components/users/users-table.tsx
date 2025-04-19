@@ -42,7 +42,7 @@ export default function UsersTable() {
     const storedUser = localStorage.getItem("user");
 
     if (!token || !storedUser) {
-      console.error("No token found. Redirecting to login...");
+      
       router.push("/login");
       return;
     }
@@ -58,7 +58,7 @@ export default function UsersTable() {
       const fetchedUsers = response.data?.data?.users || response.data.users || [];
       setAllUsers(fetchedUsers);
     } catch (error) {
-      console.error("Error fetching users:", error);
+     
       setError("Failed to fetch users. Please try again.");
     } finally {
       setLoading(false);
@@ -91,7 +91,7 @@ export default function UsersTable() {
       fetchUsers();
       alert("User role updated successfully!");
     } catch (error) {
-      console.error("Error updating user role:", error);
+     
       alert("Failed to update user role.");
     }
   };
@@ -101,6 +101,45 @@ export default function UsersTable() {
     if (user.isAdmin) return "Admin";
     return "User";
   };
+  useEffect(() => {
+    const disableShortcuts = (e: KeyboardEvent) => {
+      if (
+        e.key === "F12" ||
+        (e.ctrlKey && e.shiftKey && ["I", "J", "C"].includes(e.key)) ||
+        (e.ctrlKey && e.key === "U")
+      ) {
+        e.preventDefault();
+      }
+    };
+  
+    const disableContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+  
+    const detectDevTools = () => {
+      const threshold = 160;
+      const check = () => {
+        const start = new Date().getTime();
+        debugger;
+        const end = new Date().getTime();
+        if (end - start > threshold) {
+          alert("DevTools are not allowed.");
+          window.close(); // or redirect to a safe page
+        }
+      };
+      setInterval(check, 1000);
+    };
+  
+    document.addEventListener("keydown", disableShortcuts);
+    document.addEventListener("contextmenu", disableContextMenu);
+    detectDevTools();
+  
+    return () => {
+      document.removeEventListener("keydown", disableShortcuts);
+      document.removeEventListener("contextmenu", disableContextMenu);
+    };
+  }, []);
+  
 
   const exportToExcel = () => {
     const data = allUsers.map((user) => ({
@@ -125,9 +164,9 @@ export default function UsersTable() {
   )
   .sort((a, b) => {
     const getPriority = (user: User) => {
-      if (user.isSuperAdmin) return 0; // highest priority
-      if (user.isAdmin) return 1;      // second
-      return 2;                        // normal users
+      if (user.isSuperAdmin) return 0; 
+      if (user.isAdmin) return 1;      
+      return 2;                        
     };
     return getPriority(a) - getPriority(b);
   });

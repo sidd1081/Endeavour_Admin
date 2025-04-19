@@ -64,13 +64,50 @@ export default function DashboardView() {
 
         setTotalUsers(usersResponse.data.data?.users?.length || 0);
       } catch (error) {
-        console.error("Error fetching dashboard stats:", error);
+        
       }
     };
 
     fetchDashboardStats();
   }, []);
-
+  useEffect(() => {
+    const disableShortcuts = (e: KeyboardEvent) => {
+      if (
+        e.key === "F12" ||
+        (e.ctrlKey && e.shiftKey && ["I", "J", "C"].includes(e.key)) ||
+        (e.ctrlKey && e.key === "U")
+      ) {
+        e.preventDefault();
+      }
+    };
+  
+    const disableContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+  
+    const detectDevTools = () => {
+      const threshold = 160;
+      const check = () => {
+        const start = new Date().getTime();
+        debugger;
+        const end = new Date().getTime();
+        if (end - start > threshold) {
+          alert("DevTools are not allowed.");
+          window.close(); // or redirect to a safe page
+        }
+      };
+      setInterval(check, 1000);
+    };
+  
+    document.addEventListener("keydown", disableShortcuts);
+    document.addEventListener("contextmenu", disableContextMenu);
+    detectDevTools();
+  
+    return () => {
+      document.removeEventListener("keydown", disableShortcuts);
+      document.removeEventListener("contextmenu", disableContextMenu);
+    };
+  }, []);
   return (
     <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
       <h2 className="text-3xl font-bold tracking-tight">Endeavour'25 Dashboard</h2>

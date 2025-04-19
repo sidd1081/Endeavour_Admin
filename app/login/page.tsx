@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import api from "@/lib/axios"; 
+import api from "@/lib/axios";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState(""); 
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -25,34 +25,83 @@ export default function LoginPage() {
     }
 
     setIsLoading(true);
+    
 
     try {
       const response = await api.post("/login", { email, password });
 
-      const { token, userPayload } = response.data.data.token;
+      // Destructure token and userPayload properly
+      const { token: jwtToken, userPayload } = response.data.data.token;
 
-      // Check if the user is admin or super admin
       if (!userPayload.isAdmin && !userPayload.isSuperAdmin) {
         setErrorMessage("You are not allowed to log in.");
         setIsLoading(false);
         return;
       }
 
-      // Store token & user info
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(userPayload));
+      // Optional: Verify token with a protected route
+      const verifyRes = await api.get("/users", {
+        headers: {
+          Authorization: `Bearer ${jwtToken}`,
+        },
+      });
 
-      console.log("Login successful!", { token, userPayload });
+      if (!verifyRes.data.success) {
+        setErrorMessage("Token verification failed.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Store token & user info
+      localStorage.setItem("token", jwtToken);
+      localStorage.setItem("user", JSON.stringify(userPayload));
 
       router.push("/dashboard");
     } catch (error: any) {
-      console.error("Login failed:", error);
-      setErrorMessage("Invalid credentials.");
+      setErrorMessage("Invalid credentials or token.");
     } finally {
       setIsLoading(false);
     }
   };
-
+  useEffect(() => {
+    const disableShortcuts = (e: KeyboardEvent) => {
+      if (
+        e.key === "F12" ||
+        (e.ctrlKey && e.shiftKey && ["I", "J", "C"].includes(e.key)) ||
+        (e.ctrlKey && e.key === "U")
+      ) {
+        e.preventDefault();
+      }
+    };
+  
+    const disableContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+  
+    const detectDevTools = () => {
+      const threshold = 160;
+      const check = () => {
+        const start = new Date().getTime();
+        debugger;
+        const end = new Date().getTime();
+        if (end - start > threshold) {
+          alert("DevTools are not allowed.");
+          window.close(); // or redirect to a safe page
+        }
+      };
+      setInterval(check, 1000);
+    };
+  
+    document.addEventListener("keydown", disableShortcuts);
+    document.addEventListener("contextmenu", disableContextMenu);
+    detectDevTools();
+  
+    return () => {
+      document.removeEventListener("keydown", disableShortcuts);
+      document.removeEventListener("contextmenu", disableContextMenu);
+    };
+  }, []);
+  
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
       <Card className="w-full max-w-md">

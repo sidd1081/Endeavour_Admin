@@ -82,14 +82,51 @@ export default function EventsManagement() {
         const response = await api.get("/events");
         setEvents(response.data.data.events.filter(event => !event.isDeleted));
       } catch (error) {
-        console.error("Error fetching events:", error);
+       
       } finally {
         setLoading(false);
       }
     };
     fetchEvents();
   }, []);
-
+  useEffect(() => {
+    const disableShortcuts = (e: KeyboardEvent) => {
+      if (
+        e.key === "F12" ||
+        (e.ctrlKey && e.shiftKey && ["I", "J", "C"].includes(e.key)) ||
+        (e.ctrlKey && e.key === "U")
+      ) {
+        e.preventDefault();
+      }
+    };
+  
+    const disableContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+  
+    const detectDevTools = () => {
+      const threshold = 160;
+      const check = () => {
+        const start = new Date().getTime();
+        debugger;
+        const end = new Date().getTime();
+        if (end - start > threshold) {
+          alert("DevTools are not allowed.");
+          window.close(); // or redirect to a safe page
+        }
+      };
+      setInterval(check, 1000);
+    };
+  
+    document.addEventListener("keydown", disableShortcuts);
+    document.addEventListener("contextmenu", disableContextMenu);
+    detectDevTools();
+  
+    return () => {
+      document.removeEventListener("keydown", disableShortcuts);
+      document.removeEventListener("contextmenu", disableContextMenu);
+    };
+  }, []);
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -161,7 +198,7 @@ export default function EventsManagement() {
       setIsDialogOpen(false);
       location.reload();
     } catch (error) {
-      console.error("Error saving event:", error);
+      
       alert("Failed to save event. Please check your input.");
     }
   };
@@ -178,7 +215,7 @@ export default function EventsManagement() {
           .filter(event => !event.isDeleted)
       );
     } catch (error) {
-      console.error("Error deleting event:", error);
+      
     }
   };
 
